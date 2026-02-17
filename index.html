@@ -1,0 +1,554 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="theme-color" content="#0d1117">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="QR Rack">
+<title>QR Rack - نظام إدارة الأصناف</title>
+<link rel="manifest" href="manifest.json">
+<link rel="icon" type="image/png" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='80' font-size='80'>📦</text></svg>">
+<link rel="apple-touch-icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='80' font-size='80'>📦</text></svg>">
+<style>
+@import url('https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+Arabic:wght@400;600;700&display=swap');
+:root{
+  --bg:#0d1117;--card:#161b27;--card2:#1e2535;--border:#253047;
+  --amber:#f59e0b;--amberD:rgba(245,158,11,.15);--amberG:rgba(245,158,11,.3);
+  --green:#10b981;--greenD:rgba(16,185,129,.12);
+  --red:#ef4444;--redD:rgba(239,68,68,.12);
+  --txt:#dde6f0;--txt2:#8fa3bc;--txt3:#4e637a;
+  --r:12px;--rs:8px;
+}
+*{margin:0;padding:0;box-sizing:border-box;-webkit-tap-highlight-color:transparent;user-select:none;-webkit-user-select:none}
+html,body{height:100%;overflow:hidden}
+body{font-family:'IBM Plex Sans Arabic',Arial,sans-serif;background:var(--bg);color:var(--txt);display:flex;flex-direction:column;touch-action:pan-y}
+
+/* INSTALL PROMPT */
+.install-prompt{display:none;position:fixed;bottom:70px;left:16px;right:16px;z-index:500;background:var(--card);border:1px solid var(--border);border-radius:var(--r);padding:14px;box-shadow:0 8px 24px rgba(0,0,0,.6);animation:slideUp .3s ease}
+.install-prompt.show{display:flex}
+@keyframes slideUp{from{transform:translateY(100%);opacity:0}to{transform:translateY(0);opacity:1}}
+
+/* TOPBAR */
+#topbar{flex-shrink:0;background:rgba(13,17,23,.96);backdrop-filter:blur(20px);border-bottom:1px solid var(--border);padding:0 16px;height:58px;display:flex;align-items:center;justify-content:space-between;position:sticky;top:0;z-index:90}
+.brand{display:flex;align-items:center;gap:10px}
+.brand-icon{width:36px;height:36px;background:var(--amber);border-radius:9px;display:flex;align-items:center;justify-content:center;font-size:17px;box-shadow:0 0 18px var(--amberG)}
+.brand-title{font-size:16px;font-weight:700;color:#fff}
+.brand-sub{font-size:10px;color:var(--txt3);margin-top:1px}
+.stats{display:flex;gap:6px}
+.stat{background:var(--card);border:1px solid var(--border);border-radius:16px;padding:4px 10px;font-size:11px;color:var(--txt2);display:flex;align-items:center;gap:4px;font-family:monospace}
+.stat b{color:var(--amber);font-size:14px}
+.stat.danger b{color:var(--red)}
+
+/* NAV */
+#nav{flex-shrink:0;display:grid;grid-template-columns:repeat(3,1fr);background:var(--card);border-bottom:1px solid var(--border);position:sticky;top:58px;z-index:89}
+.ntab{background:none;border:none;padding:13px 4px 11px;color:var(--txt3);font-family:'IBM Plex Sans Arabic',Arial,sans-serif;font-size:11px;font-weight:600;cursor:pointer;display:flex;flex-direction:column;align-items:center;gap:3px;border-bottom:2px solid transparent;transition:all .18s;-webkit-tap-highlight-color:transparent}
+.ntab .ni{font-size:20px;line-height:1}
+.ntab:active{background:var(--card2)}
+.ntab.on{color:var(--amber);border-bottom-color:var(--amber);background:var(--card2)}
+
+/* SCREENS */
+#wrap{flex:1;overflow-y:auto;overflow-x:hidden;-webkit-overflow-scrolling:touch}
+.screen{display:none;padding:18px 16px 100px;max-width:600px;margin:0 auto;width:100%}
+.screen.on{display:block;animation:fu .22s ease}
+@keyframes fu{from{opacity:0;transform:translateY(6px)}to{opacity:1;transform:translateY(0)}}
+
+/* SECTION HEAD */
+.sh{display:flex;align-items:flex-end;justify-content:space-between;margin-bottom:16px}
+.sh h2{font-size:22px;font-weight:700;letter-spacing:-.5px}
+.sh p{font-size:12px;color:var(--txt3);margin-top:2px}
+
+/* CARD */
+.box{background:var(--card);border:1px solid var(--border);border-radius:var(--r);padding:20px;margin-bottom:14px}
+
+/* FIELDS */
+.fld{margin-bottom:13px}
+.fld label{display:block;font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:1.2px;color:var(--txt3);margin-bottom:5px;user-select:none}
+.fld input{width:100%;background:var(--card2);border:1px solid var(--border);border-radius:var(--rs);padding:12px 13px;color:var(--txt);font-family:'IBM Plex Sans Arabic',Arial,sans-serif;font-size:15px;outline:none;transition:border .15s,box-shadow .15s;direction:rtl;-webkit-appearance:none;user-select:text;-webkit-user-select:text}
+.fld input:focus{border-color:var(--amber);box-shadow:0 0 0 3px var(--amberD)}
+.fld input::placeholder{color:var(--txt3);font-size:13px}
+.frow{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+
+/* BUTTONS */
+.btn{border:none;border-radius:var(--rs);font-family:'IBM Plex Sans Arabic',Arial,sans-serif;font-size:13px;font-weight:700;cursor:pointer;display:inline-flex;align-items:center;justify-content:center;gap:6px;transition:all .15s;padding:12px 18px;-webkit-appearance:none;touch-action:manipulation}
+.btn:active{transform:scale(.97)}
+.ba{background:var(--amber);color:#000;box-shadow:0 3px 14px var(--amberD)}
+.ba:hover{filter:brightness(1.08)}
+.bg{background:var(--card2);color:var(--txt2);border:1px solid var(--border)}
+.bg:hover{border-color:var(--amber);color:var(--amber)}
+.br{background:var(--redD);color:var(--red);border:1px solid rgba(239,68,68,.25)}
+.brow{display:flex;gap:8px;margin-top:4px}
+.brow .btn{flex:1}
+
+/* BADGES */
+.bdg{font-size:10px;font-weight:700;padding:3px 9px;border-radius:16px;white-space:nowrap}
+.bdg-g{background:var(--greenD);color:var(--green);border:1px solid rgba(16,185,129,.3)}
+.bdg-a{background:var(--amberD);color:var(--amber);border:1px solid rgba(245,158,11,.3)}
+.bdg-r{background:var(--redD);color:var(--red);border:1px solid rgba(239,68,68,.3)}
+.daybdg{display:inline-flex;align-items:center;gap:4px;padding:4px 10px;border-radius:16px;font-size:12px;font-weight:700}
+.d-g{background:var(--greenD);color:var(--green)}
+.d-a{background:var(--amberD);color:var(--amber)}
+.d-r{background:var(--redD);color:var(--red)}
+
+/* SEARCH */
+.sbox{position:relative;margin-bottom:14px}
+.sbox input{width:100%;background:var(--card);border:1px solid var(--border);border-radius:var(--rs);padding:11px 40px 11px 13px;color:var(--txt);font-family:'IBM Plex Sans Arabic',Arial,sans-serif;font-size:14px;outline:none;transition:border .15s,box-shadow .15s;user-select:text;-webkit-user-select:text}
+.sbox input:focus{border-color:var(--amber);box-shadow:0 0 0 3px var(--amberD)}
+.sico{position:absolute;left:13px;top:50%;transform:translateY(-50%);font-size:15px;color:var(--txt3);pointer-events:none}
+
+/* ITEM CARD */
+.ic{background:var(--card);border:1px solid var(--border);border-radius:var(--r);padding:15px;margin-bottom:11px;position:relative;overflow:hidden;transition:border-color .2s}
+.ic::after{content:'';position:absolute;top:0;right:0;width:3px;height:100%;border-radius:0 var(--r) var(--r) 0;background:var(--green)}
+.ic.iwarn::after{background:var(--amber)}
+.ic.iexp::after{background:var(--red)}
+.ictop{display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:10px}
+.icname{font-size:15px;font-weight:700;flex:1;line-height:1.3;padding-left:8px}
+.icmeta{display:grid;grid-template-columns:1fr 1fr;gap:6px}
+.mr{display:flex;flex-direction:column;gap:2px}
+.ml{font-size:10px;color:var(--txt3);font-weight:600;text-transform:uppercase;letter-spacing:.8px}
+.mv{font-size:12px;font-weight:600;color:var(--txt2)}
+.mv.mono{font-family:monospace;color:var(--amber);font-size:11px}
+.icbottom{display:flex;gap:7px;margin-top:13px;padding-top:11px;border-top:1px solid var(--border)}
+.icbottom .btn{padding:9px 12px;font-size:12px;flex:1}
+
+/* EMPTY */
+.empty{text-align:center;padding:50px 20px}
+.empty .ei{font-size:52px;opacity:.2;margin-bottom:10px}
+.empty h3{font-size:17px;font-weight:700;margin-bottom:5px;color:var(--txt2)}
+.empty p{font-size:12px;color:var(--txt3)}
+
+/* SCAN */
+.scan-box{background:var(--card);border:2px dashed var(--border);border-radius:var(--r);padding:22px 16px;text-align:center;margin-bottom:14px;transition:all .2s}
+.scan-box.focused{border:2px solid var(--amber);background:var(--amberD);box-shadow:0 0 0 3px var(--amberD)}
+.scan-box h3{font-size:16px;font-weight:700;margin-bottom:5px}
+.scan-box p{font-size:12px;color:var(--txt3);margin-bottom:14px}
+.sfield{width:100%;background:var(--card2);border:1px solid var(--border);border-radius:var(--rs);padding:14px;text-align:center;color:var(--txt);font-family:monospace;font-size:16px;letter-spacing:2px;outline:none;transition:border .15s,box-shadow .15s;user-select:text;-webkit-user-select:text}
+.sfield:focus{border-color:var(--amber);box-shadow:0 0 0 3px var(--amberD)}
+.nf-msg{display:none;margin-top:10px;background:var(--redD);border:1px solid rgba(239,68,68,.3);border-radius:var(--rs);padding:10px;color:var(--red);font-size:13px;font-weight:600;text-align:center}
+.sr-hero{background:var(--card);border:1px solid var(--border);border-radius:var(--r);padding:22px 16px;text-align:center;margin-bottom:12px}
+.sr-name{font-size:23px;font-weight:700;letter-spacing:-.5px;line-height:1.3;margin:10px 0}
+.sr-batch{font-family:monospace;font-size:13px;color:var(--amber);background:var(--amberD);border:1px solid var(--amberG);border-radius:6px;padding:4px 12px;display:inline-block;margin-bottom:10px}
+.sr-grid{display:grid;grid-template-columns:1fr 1fr;gap:9px;margin-top:14px}
+.sri{background:var(--card2);border:1px solid var(--border);border-radius:var(--rs);padding:13px;text-align:center}
+.sri .si{font-size:20px;margin-bottom:5px}
+.sri .sl{font-size:10px;color:var(--txt3);text-transform:uppercase;letter-spacing:.8px;margin-bottom:3px}
+.sri .sv{font-size:13px;font-weight:700}
+
+/* OVERLAY */
+#overlay{display:none;position:fixed;inset:0;z-index:200;background:rgba(0,0,0,.82);backdrop-filter:blur(14px);align-items:flex-end}
+#overlay.on{display:flex}
+.sheet{background:var(--card);border-top:1px solid var(--border);border-radius:22px 22px 0 0;padding:18px 18px 40px;width:100%;max-height:88vh;overflow-y:auto;animation:su .28s cubic-bezier(.32,.72,0,1);-webkit-overflow-scrolling:touch}
+@keyframes su{from{transform:translateY(100%)}to{transform:translateY(0)}}
+.sheet-handle{width:38px;height:4px;background:var(--border);border-radius:2px;margin:0 auto 18px;cursor:grab}
+.sheet-title{font-size:17px;font-weight:700;text-align:center;margin-bottom:18px}
+.qr-center{display:flex;justify-content:center;margin-bottom:16px}
+.qr-frame{background:#fff;padding:13px;border-radius:14px;box-shadow:0 0 36px var(--amberG)}
+.qr-meta{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:16px}
+.qm{background:var(--card2);border:1px solid var(--border);border-radius:var(--rs);padding:11px}
+.qm .ql{font-size:10px;color:var(--txt3);text-transform:uppercase;letter-spacing:.8px;margin-bottom:3px}
+.qm .qv{font-size:13px;font-weight:700}
+.qm .qv.mono{font-family:monospace;color:var(--amber);font-size:12px}
+.sheet-btns{display:grid;grid-template-columns:1fr 1fr;gap:9px}
+.sheet-btns .btn{padding:13px}
+
+/* TOAST */
+#toast{position:fixed;bottom:88px;left:50%;transform:translateX(-50%);background:var(--card2);border:1px solid var(--border);border-radius:18px;padding:9px 18px;font-size:13px;font-weight:600;box-shadow:0 6px 20px rgba(0,0,0,.4);z-index:300;opacity:0;pointer-events:none;transition:opacity .2s;white-space:nowrap}
+#toast.on{opacity:1}
+
+@media(min-width:600px){
+  .sr-grid{grid-template-columns:1fr 1fr 1fr}
+  .qr-meta{grid-template-columns:1fr 1fr 1fr}
+}
+
+/* PWA Install Button */
+.pwa-install{position:fixed;bottom:20px;right:20px;background:var(--amber);color:#000;border:none;border-radius:50%;width:56px;height:56px;font-size:24px;box-shadow:0 4px 20px rgba(245,158,11,.4);cursor:pointer;display:none;align-items:center;justify-content:center;z-index:100;animation:bounce 2s infinite}
+.pwa-install.show{display:flex}
+@keyframes bounce{0%,100%{transform:translateY(0)}50%{transform:translateY(-10px)}}
+</style>
+</head>
+<body>
+
+<div id="topbar">
+  <div class="brand">
+    <div class="brand-icon">📦</div>
+    <div>
+      <div class="brand-title">QR Rack</div>
+      <div class="brand-sub">نظام إدارة الأصناف</div>
+    </div>
+  </div>
+  <div class="stats">
+    <div class="stat"><b id="s-total">0</b> صنف</div>
+    <div class="stat" id="s-warn-pill" style="display:none"><b id="s-warn">0</b> ⚠️</div>
+    <div class="stat danger" id="s-exp-pill" style="display:none"><b id="s-exp">0</b> 🔴</div>
+  </div>
+</div>
+
+<div id="nav">
+  <button class="ntab on" id="tab-add"><span class="ni">➕</span>إضافة</button>
+  <button class="ntab" id="tab-list"><span class="ni">📋</span>الأصناف</button>
+  <button class="ntab" id="tab-scan"><span class="ni">🔍</span>سكان</button>
+</div>
+
+<div id="wrap">
+  <!-- ADD -->
+  <div class="screen on" id="sc-add">
+    <div class="sh"><div><h2>صنف جديد</h2><p>سيتم توليد QR Code تلقائياً</p></div></div>
+    <div class="box">
+      <div class="fld"><label>🏷️ اسم الصنف *</label><input type="text" id="f-name" placeholder="مثال: كلور الصوديوم 25 كجم"></div>
+      <div class="fld"><label>🔢 رقم الباتش *</label><input type="text" id="f-batch" placeholder="مثال: BT-2024-001"></div>
+      <div class="frow">
+        <div class="fld"><label>📅 تاريخ الإنتاج *</label><input type="date" id="f-mfg"></div>
+        <div class="fld"><label>⏳ تاريخ الانتهاء *</label><input type="date" id="f-exp"></div>
+      </div>
+      <div class="fld"><label>📝 ملاحظات</label><input type="text" id="f-notes" placeholder="اختياري"></div>
+      <div class="brow">
+        <button class="btn ba" id="btn-add">✨ إضافة وتوليد QR</button>
+        <button class="btn bg" id="btn-clear">🔄 مسح</button>
+      </div>
+    </div>
+    <div class="box" id="preview-box" style="display:none">
+      <div style="text-align:center">
+        <div style="font-size:11px;text-transform:uppercase;letter-spacing:1px;color:var(--txt3);margin-bottom:8px">تم الإضافة ✅</div>
+        <div id="pv-name" style="font-size:17px;font-weight:700;margin-bottom:12px"></div>
+        <div style="background:#fff;padding:12px;border-radius:12px;display:inline-block;box-shadow:0 0 24px var(--amberG)">
+          <div id="pv-qr"></div>
+        </div>
+        <div id="pv-meta" style="font-size:12px;color:var(--txt3);line-height:2.2;margin-top:10px;margin-bottom:14px"></div>
+      </div>
+      <div class="brow">
+        <button class="btn ba" id="btn-pv-print">🖨️ طباعة الملصق</button>
+        <button class="btn bg" id="btn-pv-list">📋 عرض القائمة</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- LIST -->
+  <div class="screen" id="sc-list">
+    <div class="sh">
+      <div><h2>الأصناف</h2></div>
+      <button class="btn bg" id="btn-print-all" style="padding:8px 14px;font-size:12px">🖨️ طباعة الكل</button>
+    </div>
+    <div class="sbox">
+      <input type="text" id="search-inp" placeholder="بحث بالاسم أو الباتش...">
+      <span class="sico">🔍</span>
+    </div>
+    <div id="list-body"></div>
+  </div>
+
+  <!-- SCAN -->
+  <div class="screen" id="sc-scan">
+    <div class="sh"><div><h2>نتيجة السكان</h2><p>سكان QR أو اكتب الباتش</p></div></div>
+    <div class="scan-box" id="scan-box">
+      <h3>📱 جاهز للسكان</h3>
+      <p>وجّه كاميرا الموبايل على QR Code أو اكتب رقم الباتش يدوياً</p>
+      <input type="text" class="sfield" id="scan-inp" placeholder="BATCH-001" autocomplete="off" autocorrect="off" spellcheck="false">
+      <div class="nf-msg" id="nf-msg">❌ لم يتم العثور على هذا الصنف</div>
+    </div>
+    <div id="scan-result" style="display:none"></div>
+  </div>
+</div>
+
+<div id="overlay">
+  <div class="sheet">
+    <div class="sheet-handle"></div>
+    <div class="sheet-title" id="sh-title"></div>
+    <div class="qr-center"><div class="qr-frame"><div id="sh-qr"></div></div></div>
+    <div class="qr-meta" id="sh-meta"></div>
+    <div class="sheet-btns">
+      <button class="btn ba" id="sh-print">🖨️ طباعة الملصق</button>
+      <button class="btn bg" id="sh-close">❌ إغلاق</button>
+    </div>
+  </div>
+</div>
+
+<div id="toast"></div>
+
+<!-- Install prompt -->
+<div class="install-prompt" id="install-prompt">
+  <div style="flex:1">
+    <div style="font-size:14px;font-weight:700;margin-bottom:4px">📦 نزّل التطبيق</div>
+    <div style="font-size:12px;color:var(--txt3)">اضغط للتثبيت على الموبايل</div>
+  </div>
+  <button class="btn ba" id="install-btn" style="padding:10px 16px;font-size:12px">تثبيت</button>
+  <button class="btn bg" id="install-close" style="padding:10px 14px;font-size:12px;margin-right:8px">✕</button>
+</div>
+
+<button class="pwa-install" id="pwa-fab">📲</button>
+
+<script>
+// Embed QR library and app code from previous version here...
+// (The full QR generator code from qr-rack-v3.html)
+</script>
+
+<script>
+// ═══════════════════════════════════════════════════════════════════════════
+//  PWA SERVICE WORKER REGISTRATION
+// ═══════════════════════════════════════════════════════════════════════════
+if ('serviceWorker' in navigator) {
+  window.addEventListener('load', () => {
+    navigator.serviceWorker.register('sw.js')
+      .then(reg => console.log('✅ Service Worker registered'))
+      .catch(err => console.log('❌ Service Worker registration failed:', err));
+  });
+}
+
+// ═══════════════════════════════════════════════════════════════════════════
+//  PWA INSTALL PROMPT
+// ═══════════════════════════════════════════════════════════════════════════
+let deferredPrompt;
+const installPrompt = document.getElementById('install-prompt');
+const installBtn = document.getElementById('install-btn');
+const installClose = document.getElementById('install-close');
+const pwaFab = document.getElementById('pwa-fab');
+
+window.addEventListener('beforeinstallprompt', (e) => {
+  e.preventDefault();
+  deferredPrompt = e;
+  
+  // Show install prompt after 3 seconds
+  setTimeout(() => {
+    installPrompt.classList.add('show');
+    pwaFab.classList.add('show');
+  }, 3000);
+});
+
+installBtn.addEventListener('click', async () => {
+  if (!deferredPrompt) return;
+  deferredPrompt.prompt();
+  const { outcome } = await deferredPrompt.userChoice;
+  console.log(`User response: ${outcome}`);
+  deferredPrompt = null;
+  installPrompt.classList.remove('show');
+  pwaFab.classList.remove('show');
+});
+
+pwaFab.addEventListener('click', () => {
+  installPrompt.classList.add('show');
+});
+
+installClose.addEventListener('click', () => {
+  installPrompt.classList.remove('show');
+});
+
+// Hide prompt if already installed
+window.addEventListener('appinstalled', () => {
+  installPrompt.classList.remove('show');
+  pwaFab.classList.remove('show');
+  console.log('✅ PWA installed successfully');
+});
+  return           {ic:'',    bdg:'bdg-g', lbl:'صالح ✅',      dc:'d-g'};
+}
+function fdate(d){
+  if(!d) return '—';
+  try{ return new Date(d).toLocaleDateString('ar-EG',{year:'numeric',month:'short',day:'numeric'}); }
+  catch(e){ return d; }
+}
+function qrText(item){
+  return 'ID:'+item.id+'|N:'+item.name+'|B:'+item.batch+'|M:'+item.mfg+'|E:'+item.exp+'|X:'+(item.notes||'');
+}
+function mkQR(el,item,size){
+  if(!el) return;
+  el.innerHTML='';
+  try{
+    new QRCodeLib(el,{text:qrText(item),width:size||150,height:size||150,colorDark:'#000000',colorLight:'#ffffff',correctLevel:QRCodeLib.CorrectLevel.M});
+  }catch(err){ el.textContent='!'; console.error(err); }
+}
+function showToast(msg,clr){
+  var t=document.getElementById('toast');
+  t.textContent=msg; t.style.color=clr||'var(--green)';
+  t.classList.add('on');
+  clearTimeout(t._tid);
+  t._tid=setTimeout(function(){ t.classList.remove('on'); },2500);
+}
+function updStats(){
+  var tot=items.length;
+  var exp=items.filter(function(i){ return daysLeft(i.exp)<0; }).length;
+  var warn=items.filter(function(i){ var d=daysLeft(i.exp); return d>=0&&d<=30; }).length;
+  document.getElementById('s-total').textContent=tot;
+  document.getElementById('s-warn').textContent=warn;
+  document.getElementById('s-exp').textContent=exp;
+  document.getElementById('s-warn-pill').style.display=warn>0?'':'none';
+  document.getElementById('s-exp-pill').style.display=exp>0?'':'none';
+}
+
+// ── navigation ──
+var TABS=['add','list','scan'];
+function goTo(id){
+  TABS.forEach(function(t){
+    document.getElementById('tab-'+t).classList.toggle('on',t===id);
+    document.getElementById('sc-'+t).classList.toggle('on',t===id);
+  });
+  if(id==='list') renderList();
+  if(id==='scan') setTimeout(function(){ document.getElementById('scan-inp').focus(); },150);
+}
+document.getElementById('tab-add').addEventListener('click',  function(){ goTo('add');  });
+document.getElementById('tab-list').addEventListener('click', function(){ goTo('list'); });
+document.getElementById('tab-scan').addEventListener('click', function(){ goTo('scan'); });
+
+// ── ADD ──
+document.getElementById('btn-add').addEventListener('click', function(){
+  var name  = document.getElementById('f-name').value.trim();
+  var batch = document.getElementById('f-batch').value.trim();
+  var mfg   = document.getElementById('f-mfg').value;
+  var exp   = document.getElementById('f-exp').value;
+  var notes = document.getElementById('f-notes').value.trim();
+  if(!name||!batch||!mfg||!exp){ showToast('⚠️ يرجى ملء جميع الحقول الإلزامية','var(--red)'); return; }
+  var item={id:Date.now().toString(),name:name,batch:batch,mfg:mfg,exp:exp,notes:notes};
+  items.unshift(item); save(); updStats();
+  ['f-name','f-batch','f-mfg','f-exp','f-notes'].forEach(function(x){ document.getElementById(x).value=''; });
+  var pb=document.getElementById('preview-box');
+  pb.style.display='block';
+  document.getElementById('pv-name').textContent=item.name;
+  var pvq=document.getElementById('pv-qr'); pvq.innerHTML='';
+  setTimeout(function(){ mkQR(pvq,item,130); },60);
+  var s=status(item.exp);
+  document.getElementById('pv-meta').innerHTML=
+    '🏭 الباتش: <strong style="color:var(--amber);font-family:monospace">'+item.batch+'</strong>'+
+    ' &nbsp;<span class="bdg '+s.bdg+'">'+s.lbl+'</span><br>'+
+    '📅 '+fdate(item.mfg)+' ← ⏳ '+fdate(item.exp);
+  document.getElementById('btn-pv-print').onclick=function(){ printItem(item.id); };
+  showToast('✅ تم إضافة الصنف بنجاح');
+});
+document.getElementById('btn-clear').addEventListener('click', function(){
+  ['f-name','f-batch','f-mfg','f-exp','f-notes'].forEach(function(x){ document.getElementById(x).value=''; });
+  document.getElementById('preview-box').style.display='none';
+});
+document.getElementById('btn-pv-list').addEventListener('click', function(){ goTo('list'); });
+
+// ── LIST ──
+document.getElementById('search-inp').addEventListener('input', function(){ renderList(); });
+document.getElementById('btn-print-all').addEventListener('click', function(){ printAll(); });
+
+function renderList(){
+  var q=(document.getElementById('search-inp').value||'').toLowerCase().trim();
+  var fl=q?items.filter(function(i){ return i.name.includes(q)||i.batch.toLowerCase().includes(q); }):items;
+  var body=document.getElementById('list-body');
+  if(!fl.length){
+    body.innerHTML='<div class="empty"><div class="ei">'+(q?'🔍':'📦')+'</div><h3>'+(q?'لا توجد نتائج':'لا يوجد أصناف')+'</h3><p>'+(q?'جرب بحثاً مختلفاً':'اضغط إضافة لإضافة أول صنف')+'</p></div>';
+    return;
+  }
+  var html='';
+  fl.forEach(function(item){
+    var s=status(item.exp); var d=daysLeft(item.exp);
+    html+='<div class="ic '+s.ic+'">'+
+      '<div class="ictop"><div class="icname">'+item.name+'</div><span class="bdg '+s.bdg+'">'+s.lbl+'</span></div>'+
+      '<div class="icmeta">'+
+        '<div class="mr"><div class="ml">الباتش</div><div class="mv mono">'+item.batch+'</div></div>'+
+        '<div class="mr"><div class="ml">المتبقي</div><div class="mv"><span class="daybdg '+s.dc+'">'+(d<0?'منتهي':d+' يوم')+'</span></div></div>'+
+        '<div class="mr"><div class="ml">الإنتاج</div><div class="mv">'+fdate(item.mfg)+'</div></div>'+
+        '<div class="mr"><div class="ml">الانتهاء</div><div class="mv">'+fdate(item.exp)+'</div></div>'+
+      '</div>'+
+      '<div class="icbottom">'+
+        '<button class="btn ba" onclick="showSheet(\''+item.id+'\')">🔍 QR Code</button>'+
+        '<button class="btn bg" onclick="printItem(\''+item.id+'\')">🖨️ طباعة</button>'+
+        '<button class="btn br" onclick="delItem(\''+item.id+'\')">🗑️</button>'+
+      '</div></div>';
+  });
+  body.innerHTML=html;
+}
+function delItem(id){
+  if(!confirm('حذف هذا الصنف؟')) return;
+  items=items.filter(function(i){ return i.id!==id; });
+  save(); updStats(); renderList();
+  showToast('🗑️ تم الحذف');
+}
+
+// ── SHEET ──
+function showSheet(id){
+  var item=items.find(function(i){ return i.id===id; });
+  if(!item) return;
+  var s=status(item.exp); var d=daysLeft(item.exp);
+  document.getElementById('sh-title').textContent=item.name;
+  var shq=document.getElementById('sh-qr'); shq.innerHTML='';
+  setTimeout(function(){ mkQR(shq,item,180); },60);
+  document.getElementById('sh-meta').innerHTML=
+    '<div class="qm"><div class="ql">الباتش</div><div class="qv mono">'+item.batch+'</div></div>'+
+    '<div class="qm"><div class="ql">الإنتاج</div><div class="qv">'+fdate(item.mfg)+'</div></div>'+
+    '<div class="qm"><div class="ql">الانتهاء</div><div class="qv">'+fdate(item.exp)+'</div></div>'+
+    '<div class="qm"><div class="ql">الحالة</div><div class="qv"><span class="bdg '+s.bdg+'">'+s.lbl+'</span></div></div>'+
+    '<div class="qm"><div class="ql">المتبقي</div><div class="qv"><span class="daybdg '+s.dc+'">'+(d<0?'منتهي':d+' يوم')+'</span></div></div>'+
+    (item.notes?'<div class="qm" style="grid-column:1/-1"><div class="ql">ملاحظات</div><div class="qv">'+item.notes+'</div></div>':'');
+  document.getElementById('sh-print').onclick=function(){ printItem(id); };
+  document.getElementById('overlay').classList.add('on');
+}
+document.getElementById('sh-close').addEventListener('click', function(){ document.getElementById('overlay').classList.remove('on'); });
+document.getElementById('overlay').addEventListener('click', function(e){ if(e.target===this) this.classList.remove('on'); });
+
+// ── SCAN ──
+var scanInp=document.getElementById('scan-inp');
+scanInp.addEventListener('focus', function(){ document.getElementById('scan-box').classList.add('focused'); });
+scanInp.addEventListener('blur',  function(){ document.getElementById('scan-box').classList.remove('focused'); });
+scanInp.addEventListener('input', function(){ doScan(this.value.trim()); });
+
+function doScan(val){
+  var nf=document.getElementById('nf-msg'); var res=document.getElementById('scan-result');
+  if(!val){ nf.style.display='none'; res.style.display='none'; return; }
+  var found=null;
+  if(val.indexOf('ID:')!==-1){var m=val.match(/ID:([^|]+)/); if(m) found=items.find(function(i){ return i.id===m[1]; });}
+  if(!found) found=items.find(function(i){ return i.batch.toLowerCase()===val.toLowerCase(); });
+  if(!found&&val.length>=2) found=items.find(function(i){ return i.batch.toLowerCase().indexOf(val.toLowerCase())!==-1; });
+  if(!found&&val.length>=2) found=items.find(function(i){ return i.name.indexOf(val)!==-1; });
+  if(!found){ nf.style.display='block'; res.style.display='none'; return; }
+  nf.style.display='none';
+  var s=status(found.exp); var d=daysLeft(found.exp);
+  var ec=d<0?'border:1px solid var(--red)':d<=30?'border:1px solid var(--amber)':'';
+  res.innerHTML='<div class="sr-hero">'+
+    '<span class="bdg '+s.bdg+'" style="font-size:12px;padding:5px 13px">'+s.lbl+'</span>'+
+    '<div class="sr-name">'+found.name+'</div>'+
+    '<div class="sr-batch">'+found.batch+'</div>'+
+    (found.notes?'<div style="font-size:12px;color:var(--txt3);margin-top:4px">📝 '+found.notes+'</div>':'')+
+    '<div class="sr-grid">'+
+      '<div class="sri"><div class="si">🏭</div><div class="sl">تاريخ الإنتاج</div><div class="sv">'+fdate(found.mfg)+'</div></div>'+
+      '<div class="sri" style="'+ec+'"><div class="si">⏳</div><div class="sl">تاريخ الانتهاء</div><div class="sv">'+fdate(found.exp)+'</div></div>'+
+      '<div class="sri"><div class="si">📆</div><div class="sl">المتبقي</div><div class="sv"><span class="daybdg '+s.dc+'">'+(d<0?'منتهي ⛔':d+' يوم')+'</span></div></div>'+
+    '</div></div>';
+  res.style.display='block';
+}
+
+// ── PRINT ──
+function buildLabel(item){
+  return new Promise(function(resolve){
+    var tmp=document.createElement('div');
+    tmp.style.cssText='position:absolute;left:-9999px;top:0';
+    document.body.appendChild(tmp);
+    new QRCodeLib(tmp,{text:qrText(item),width:90,height:90,colorDark:'#000',colorLight:'#fff'});
+    setTimeout(function(){
+      var canvas=tmp.querySelector('canvas');
+      var img=canvas?'<img src="'+canvas.toDataURL()+'" width="90" height="90">':'';
+      document.body.removeChild(tmp);
+      resolve('<div style="display:inline-block;direction:rtl;font-family:Arial,sans-serif;background:#fff;color:#000;border:2px solid #000;border-radius:6px;padding:9px;width:88mm;vertical-align:top;margin:4mm;page-break-inside:avoid">'+
+        '<div style="font-size:14pt;font-weight:900;text-align:center;border-bottom:1.5px solid #000;padding-bottom:5px;margin-bottom:7px;line-height:1.3">'+item.name+'</div>'+
+        '<div style="display:flex;gap:9px;align-items:flex-start">'+
+          '<div style="flex:1;font-size:9.5pt;line-height:2">'+
+            '<div><strong>الباتش:</strong> <span style="font-family:monospace">'+item.batch+'</span></div>'+
+            '<div><strong>تاريخ الإنتاج:</strong> '+fdate(item.mfg)+'</div>'+
+            '<div><strong>تاريخ الانتهاء:</strong> '+fdate(item.exp)+'</div>'+
+            (item.notes?'<div><strong>ملاحظات:</strong> '+item.notes+'</div>':'')+
+          '</div>'+
+          '<div style="flex-shrink:0">'+img+'</div>'+
+        '</div></div>');
+    },400);
+  });
+}
+function openPrint(html,title){
+  var w=window.open('','_blank');
+  if(!w){ showToast('⚠️ اسمح بالنوافذ المنبثقة','var(--red)'); return; }
+  w.document.write('<!DOCTYPE html><html dir="rtl"><head><meta charset="UTF-8"><title>'+title+'</title><style>body{margin:6mm}@page{margin:4mm}</style></head><body>'+html+'</body></html>');
+  w.document.close();
+  setTimeout(function(){ w.print(); w.close(); },600);
+}
+function printItem(id){
+  var item=items.find(function(i){ return i.id===id; });
+  if(!item) return;
+  showToast('⏳ جاري التجهيز...');
+  buildLabel(item).then(function(html){
+    openPrint(html,'طباعة - '+item.name);
+    document.getElementById('overlay').classList.remove('on');
+  });
+}
+function printAll(){
+</script>
+
+</body>
+</html>
